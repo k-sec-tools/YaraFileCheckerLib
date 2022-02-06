@@ -1,4 +1,7 @@
-# file_cheker
+# yara_file_cheker
+
+the library is designed to make it easier to check potentially malicious files and archives using YARA and make a decision about their harmfulness based on the weights of the detected rules
+
 
 Config:
 
