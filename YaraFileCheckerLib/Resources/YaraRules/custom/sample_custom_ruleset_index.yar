@@ -1,0 +1,1 @@
+include  "./sample_custom_ruleset/special.yar"

@@ -1,0 +1,1 @@
+include  "./here_can_be_big_rule_file.yara"
