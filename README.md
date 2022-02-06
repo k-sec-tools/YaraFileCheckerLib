@@ -1,47 +1,43 @@
 # file_cheker
 
-конфиг:
+Config:
 
-* FileSizeLimitKb: !!int // ограничение: ограничение суммарного размера исследуемых файлов (в т.ч. в архиве)
-* ArchiveDepthLimit: !!int // ограничение: сколько вложенных архивов можно проверять
-* ProcessingTimeLimitMs: !!int // ограничение: сколько милисекунд ждать от библиотеки результатов, прежде чем прервать ее работу
-* FilesCountLimit: !!int // ограничение: сколько файлов в архиве можно проверять
-* DangerousThreshold: !!int // настройка: порог, после достижения которого (исходя из суммы весов правил yara, которые сматчились при обработке файла) принимается решение о том, что файл вредоносный и обработка прекращается
-* YaraRuleScoreDefault: !!int // настройка: удельный вес правила yara, если не указано иное в теге score_
-* ScanArchives: !!bool // настройка: сканировать ли архивы. необходима библиотека 7z.dll в папке Resources рядом с FileCheckerLib.dll
-* FastScan: !!bool // настройка: быстрое сканирование. если True, при обнаружении первых совпадений Yara дальнейший поиск матчей правила прекращается. рекомендуется для ускорения сканирования
-* ArchiveFileTypes: массив // настройка - список расширений файлов архивов
-* ExecutableExtensions: массив// настройка - список расширений исполняемых файлов
+* FileSizeLimitKb: !!int // limit: limit of summary checked files size (archived files included)
+* ArchiveDepthLimit: !!int // limit: how many nested archives we can check
+* ProcessingTimeLimitMs: !!int // limit: how much time to wait until stoping check
+* FilesCountLimit: !!int // limit: how many files in archive we can check
+* DangerousThreshold: !!int // setting: threshold, after reaching which (based on the sum of the weights of the yara rules that matched during file processing) a decision is made that the file is malicious and processing stops
+* YaraRuleScoreDefault: !!int // setting: the weight of the yara rule, unless otherwise specified in the score_ tag
+* ScanArchives: !!bool // setting: whether to scan archives. the 7z.dll library is required in the Resources folder
+* FastScan: !!bool // setting: yara fast scan
+* ArchiveFileTypes: array // setting - list of archive file extensions
+* ExecutableExtensions: array// setting - list of executable file extensions
 
-Использование:
+Using:
 ```
-var log = new SynchronousConsoleLog(); // любой ILog
+var log = new SynchronousConsoleLog(); 
 var fileChecker = new FileChecker();
-var fileBytes = ReadFileBytes(sampleFilePath); // любыми средствами разбираем файл для проверки на массив байт
-var fileObject = new FileObject(fileBytes, sampleFilePath); // объект, состоящий из массива байт проверяемого файла и его имени (опционально)
-var scanMode = FileChecker.ScanMode.Mid; // режим проверки
+var fileBytes = ReadFileBytes(sampleFilePath);
+var fileObject = new FileObject(fileBytes, sampleFilePath); 
+var scanMode = FileChecker.ScanMode.Mid; 
 /*
-Lite - правила из папки Resources/YaraRules/Lite
-Mid - Lite + Resources/YaraRules/Mid
-Hard - Mid + Resources/YaraRules/Hard
-Custom - Resources/YaraRules/custom. 
-вкратце суть:
-Lite - определить исполняемый ли файл или содержит ли откровенно подозрительные строки (быстро, лучше использовать если надо только определить, исполняемый ли файл)
-Mid - кастомный набор правил, для определения уязвимых доков, eicar, наиболее популярной малвари (норм по соотношению быстродействие/качество)
-Hard - конвертированная база антивируса ClamAV (медленно и неэффективно)
-Custom - если потребуется использовать какой-то очень специфичный набор правил
+rules from:
+- Lite -  Resources/YaraRules/Lite
+- Mid - Lite + Resources/YaraRules/Mid
+- Hard - Mid + Resources/YaraRules/Hard
+- Custom - Resources/YaraRules/custom. 
 */
 
 var result = fileChecker.CheckFile(fileObject, scanMode, log); // FileScanResult со следующими свойствами%
 /*
-    ScanSuccessful - успешно ли завершено исследование (если нет - вероятно либо достигнут один из лимитов или в процессе скана возникали какие-то ошибки, подробности в AdditionalInfo)
-    YaraResults - лист ScanResult https://github.com/microsoft/libyara.NET/blob/master/libyara.NET/ScanResult.h
-    AdditionalInfo - сведения об ошибках, возникших в процессе обработки
-    FileName - имя файла/файлов через |, если это архив
-    MatchedRules - список уникальных названий сматченных правил
-    Executable - является ли файл исполняеемым
-    TotalScore - сумма весов правил yara, которые сматчились при обработке файла
-    Dangerous - принято ли решение, что файл с высокой вероятностью является вредоносным
+    ScanSuccessful - is scan successful (if not - check AdditionalInfo)
+    YaraResults - list of ScanResult https://github.com/microsoft/libyara.NET/blob/master/libyara.NET/ScanResult.h
+    AdditionalInfo
+    FileName - file name/ filenames delimited with | in case of checking archives
+    MatchedRules - list of matched rules names
+    Executable - is executable/ archive contains one or more executables
+    TotalScore - summ of yara rule scores (from tag score_XXX or from YaraRuleScoreDefault in config)
+    Dangerous - is DangerousThreshold reached
 */
 ```
 
