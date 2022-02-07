@@ -61,8 +61,8 @@
     <PackageReference Include="Vostok.Logging.Abstractions">
       <Version>1.0.29</Version>
     </PackageReference>
-    <PackageReference Include="Vostok.Logging.File">
-      <Version>1.0.18</Version>
+    <PackageReference Include="Vostok.Logging.Console">
+      <Version>1.0.8</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

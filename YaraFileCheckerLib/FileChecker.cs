@@ -55,7 +55,6 @@ public partial class FileChecker : IFileChecker
             catch (Exception ex)
             {
                 scanConfig.Log.Error(ex,$"{fileObject.Name}: Cant process as archive");
-                // ignored
             }
         }
         else

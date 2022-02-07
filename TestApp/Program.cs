@@ -6,14 +6,13 @@ using System.IO;
 using System.Linq;
 using YaraFileCheckerLib;
 using Vostok.Logging.Abstractions;
-using Vostok.Logging.File;
-using Vostok.Logging.File.Configuration;
+using Vostok.Logging.Console;
 
 namespace TestApp;
 
 internal class Program
 {
-    public static string FilesFolder = $@"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Samples\VirusShare";
+    public static string FilesFolder = $@"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\Desktop\Samples\VirusShare";
 
     public static byte[] ReadFileBytes(string filePath)
     {
@@ -49,12 +48,10 @@ internal class Program
 
     private static void Main(string[] args)
     {
-        FilesFolder = $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\\currscan";
+        FilesFolder = $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}\\Desktop\\currscan";
 
-        var fls = new FileLogSettings();
-        fls.FilePath = "scanlog/checker.log";
-        var log = new FileLog(fls);
-        //var log = new SynchronousConsoleLog();
+
+        var log = new SynchronousConsoleLog();
 
         var sw = new Stopwatch();
         string folder = null;
@@ -67,12 +64,6 @@ internal class Program
         {
             folder = FilesFolder;
         }
-
-        var stat05 = new Statistics();
-        var stat1 = new Statistics();
-        var stat10 = new Statistics();
-        var stat50 = new Statistics();
-        var stat100 = new Statistics();
 
         foreach (var sampleFilePath in GetFilesInFolder(folder))
         {
@@ -92,9 +83,7 @@ internal class Program
                              + $"E:{result.Executable},"
                              + $"S:{result.ScanSuccessful},"
                              + $"A=>{result.AdditionalInfo},"
-                             +
-                             //$"\r\nY =>{string.Join("|", result.YaraResults.SelectMany(x => x.Matches.Select(y => y.Key)))}" +
-                             $"M=>{string.Join("|", result.MatchedRules.Where(s => !string.IsNullOrEmpty(s)).Distinct())}/"
+                             + $"M=>{string.Join("|", result.MatchedRules.Where(s => !string.IsNullOrEmpty(s)).Distinct())}/"
                              + $"{result.MatchedRules.Count}/{result.TotalScore},"
                              + $"T => {sw.Elapsed},"
                              + $"S=> {GetSizeInMemory(fileBytes.Length)}"
@@ -109,9 +98,7 @@ internal class Program
             }
         }
 
-        log.Info($"average: 0.5=>{Statistics.StaticsticsToString(stat05)}, 1=> {Statistics.StaticsticsToString(stat1)}"
-                 + $", 10=>{Statistics.StaticsticsToString(stat10)}, "
-                 + $"50=>{Statistics.StaticsticsToString(stat50)}, 100=>{Statistics.StaticsticsToString(stat100)}");
+        
         if (sw.IsRunning)
         {
             sw.Stop();
@@ -138,15 +125,15 @@ internal class Program
 
         using var scanConfiguration = new ScanConfig();
 
-        scanConfiguration.FileSizeLimitKb = 2048; // ограничение: ограничение суммарного размера исследуемых файлов (в т.ч. в архиве)
-        scanConfiguration.ArchiveDepthLimit = 1; // ограничение: сколько вложенных архивов можно проверять
-        scanConfiguration.ProcessingTimeLimitMs = 10000; // ограничение: 
-        scanConfiguration.FilesCountLimit = 10; // ограничение: сколько файлов в архиве можно проверять
-        scanConfiguration.ScanArchives = true; // настройка: сканировать ли архивы. необходима библиотека 7z.dll в папке Resources рядом с FileCheckerLib.dll или в Program Files
-        scanConfiguration.FastScan = false; // настройка: быстрое сканирование. если True, при обнаружении первых совпадений Yara дальнейшая обработка прекращается. рекомендуется для ускорения сканирования
-        scanConfiguration.ArchiveFileTypes = new List<string> { "*.7z" /* etc */ }; // расширения файлов архивов. не обязательны
-        scanConfiguration.YaraRules = new List<string> { "C:/path/to/files/with/yara/rules" /* etc */ }; // пути до файлов с Yara сигнатурами на диске
-        scanConfiguration.ProcessingLimits = new Limits(); // тут содержатся ограничители, необходимые для работы библиотеки
+        scanConfiguration.FileSizeLimitKb = 2048; 
+        scanConfiguration.ArchiveDepthLimit = 1; 
+        scanConfiguration.ProcessingTimeLimitMs = 10000;
+        scanConfiguration.FilesCountLimit = 10; 
+        scanConfiguration.ScanArchives = true; 
+        scanConfiguration.FastScan = false; 
+        scanConfiguration.ArchiveFileTypes = new List<string> { "*.7z" };
+        scanConfiguration.YaraRules = new List<string> { "C:/path/to/files/with/yara/rules"  }; 
+        scanConfiguration.ProcessingLimits = new Limits();
 
         var scanResult = fileCheckerInstance.CheckFile(fileObject, scanConfiguration);
         Console.WriteLine($"{scanResult.FileName} processed:"

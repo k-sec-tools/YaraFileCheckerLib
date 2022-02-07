@@ -89,28 +89,6 @@ public class FileScanResult: IFileScanResult
     public bool Dangerous { get; set; }
     public int TotalScore { get; set; }
 
-/*
-    public static FileScanResult ConcatFileScanResults(List<FileScanResult> fsrList, ScanConfig scanConfig)
-    {
-        // я надеюсь его использовать позже, хай остается
-        var result = new FileScanResult
-        {
-            AdditionalInfo = string.Join("|", fsrList.Select
-                                                         (x => x.AdditionalInfo)
-                                                     .Where(s => !string.IsNullOrEmpty(s))),
-            ScanSuccessful = fsrList.Any(x => x.ScanSuccessful)
-        };
-        result.YaraResults.AddRange(fsrList.SelectMany(x => x.YaraResults));
-        result.MatchedRules = new List<string>();
-        result.MatchedRules.AddRange(fsrList.SelectMany(x => x.MatchedRules));
-        result.Executable = fsrList.Any(x => x.Executable);
-        result.TotalScore = fsrList.Sum(x => x.TotalScore);
-        result.Dangerous = fsrList.Any(x => x.Dangerous);
-        result.Dangerous = result.Dangerous || result.TotalScore >= scanConfig.DangerousThreshold;
-        return result;
-    }
-*/
-
     public static FileScanResult ConcatFileScanResults(FileScanResult fsr1, FileScanResult fsr2, ScanConfig scanConfig)
     {
         var result = new FileScanResult

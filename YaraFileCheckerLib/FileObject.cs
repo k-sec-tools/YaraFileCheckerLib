@@ -4,14 +4,6 @@ namespace YaraFileCheckerLib;
 
 public class FileObject
 {
-/*
-    public FileObject() //у вас не используется, я надеюсь использовать в дальнейшем
-    {
-        Bytes = Array.Empty<byte>();
-        Name = null;
-    }
-*/
-
     public FileObject(byte[] bytes, string name = null)
     {
         Bytes = bytes;

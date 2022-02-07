@@ -27,7 +27,6 @@ public class ScanConfig : IDisposable
         Initialize(null, mode);
     }
 
-    //используется при чтении yaml, неочевидно но факт
     public ScanConfig(string configFilePath = null)
     {
         Initialize();
