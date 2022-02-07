@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using libyaraNET;
 using SevenZip;
 using Vostok.Logging.Abstractions;
@@ -50,6 +51,53 @@ public partial class FileChecker : IFileChecker
                 if (ExtractorCheck(extractor, scanConfig))
                 {
                     result = ArchiveBytesProcessing(fileObject, scanConfig);
+                }
+                else
+                {
+                    try
+                    {
+                        if (IsArchiveEncrypted(extractor))
+                        {
+                            string[] entrynames = new string[extractor.ArchiveFileNames.Count];
+                            try
+                            {
+                                extractor.ArchiveFileNames.CopyTo(entrynames, 0);
+                            }
+                            catch (Exception ex)
+                            {
+                                scanConfig.Log.Error($"cant read entrynames in {fileObject.Name}: {ex.Message}");
+                            }
+
+                            try
+                            {
+                                foreach (var possiblePassword in scanConfig.PasswordsToBrute)
+                                {
+                                    try
+                                    {
+                                        using var archivestream = new MemoryStream(fileObject.Bytes);
+                                        using var extractorpass = new SevenZipExtractor(archivestream, possiblePassword);
+                                        if (ExtractorCheck(extractorpass,scanConfig))
+                                        {
+                                            result = ArchiveBytesProcessing(fileObject, scanConfig, possiblePassword);
+                                            break;
+                                        }
+                                    }
+                                    catch
+                                    {
+                                        // ignored
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                scanConfig.Log.Error($"cant bruteforce {fileObject.Name}: {ex.Message}");
+                            }
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // ignored
+                    }
                 }
             }
             catch (Exception ex)
@@ -109,7 +157,35 @@ public partial class FileChecker : IFileChecker
             + $"danger score: {scanConfig.ProcessingLimits.TotalScore}, limit: {scanConfig.DangerousThreshold}.";
         scanConfig.Log.Info(result);
         return result;
-    } 
+    }
+
+    private bool IsArchiveEncrypted(SevenZipExtractor extractor)
+    {
+        var encrypted = false;
+        foreach (var afileData in extractor.ArchiveFileData)
+        {
+            if (afileData.Encrypted)
+            {
+                encrypted = true;
+                break;
+            }
+        }
+
+        if (!encrypted)
+        {
+            foreach (var archiveProperty in extractor.ArchiveProperties)
+            {
+                if (archiveProperty.Name.ToLower() == "method")
+                {
+                    encrypted |= Regex.IsMatch(archiveProperty.Value.ToString(),
+                        WildcardToRegex("*aes|*zipcrypt*"),
+                        RegexOptions.IgnoreCase);
+                }
+                if (encrypted) break;
+            }
+        }
+        return encrypted;
+    }
 
     private static bool IsAnyLimitReached(ScanConfig scanConfig)
         => scanConfig.FastScan && scanConfig.DangerousThreshold <= scanConfig.ProcessingLimits.TotalScore
@@ -166,7 +242,7 @@ public partial class FileChecker : IFileChecker
                 var yaraResults = GetYaraScanResults(fileObject, scanConfig);
                 result = FileScanResult.ConcatFileScanResults(yaraResults, result,
                                                               scanConfig);
-                if (result.YaraResults.Any(x => x.Matches.Count > 0))
+                if (!result.Dangerous)
                     //ArchiveChecking
                 {
                     if (!IsAnyLimitReached(scanConfig))
@@ -204,12 +280,23 @@ public partial class FileChecker : IFileChecker
         return result;
     }
 
-    private FileScanResult ArchiveBytesProcessing(FileObject fileObject, ScanConfig scanConfig)
+    private FileScanResult ArchiveBytesProcessing(FileObject fileObject, ScanConfig scanConfig, string password = null)
     {
-        var result = new FileScanResult();
-        using var archiveStream = new MemoryStream(fileObject.Bytes);
-        using var extractor = new SevenZipExtractor(archiveStream);
-        result = ExtractorProcessing(fileObject.Name, extractor, scanConfig);
+        FileScanResult result;
+        if (password == null)
+        {
+            using var archiveStream = new MemoryStream(fileObject.Bytes);
+            using var extractor = new SevenZipExtractor(archiveStream);
+            result = ExtractorProcessing(fileObject.Name, extractor, scanConfig);
+        }
+        else
+        {
+            using var archiveStream = new MemoryStream(fileObject.Bytes);
+            using var extractor = new SevenZipExtractor(archiveStream, password);
+            result = ExtractorProcessing(fileObject.Name, extractor, scanConfig);
+        }
+
+        
 
         return result;
     }

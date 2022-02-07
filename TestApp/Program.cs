@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using SevenZip;
 using YaraFileCheckerLib;
 using Vostok.Logging.Abstractions;
 using Vostok.Logging.Console;
@@ -16,15 +17,11 @@ internal class Program
 
     public static byte[] ReadFileBytes(string filePath)
     {
-        byte[] fileData = null;
+        byte[] fileData;
 
-        using (var fs = File.OpenRead(filePath))
-        {
-            using (var binaryReader = new BinaryReader(fs))
-            {
-                fileData = binaryReader.ReadBytes((int)fs.Length);
-            }
-        }
+        using var fs = File.OpenRead(filePath);
+        using var binaryReader = new BinaryReader(fs);
+        fileData = binaryReader.ReadBytes((int)fs.Length);
 
         return fileData;
     }
@@ -64,6 +61,10 @@ internal class Program
         {
             folder = FilesFolder;
         }
+
+        //ScanFileWithCustomProfile("C:/path/to/file2check", log);
+        ScanFileWithCustomProfile("C:/path/to/file2check.7z", log);
+
 
         foreach (var sampleFilePath in GetFilesInFolder(folder))
         {
@@ -105,12 +106,12 @@ internal class Program
         }
     }
 
-    private void ScanByteArray(byte[] byteArray, string fileName = null, string profileName = null)
+    private void ScanByteArray(byte[] byteArray, ILog log, string fileName = null, string profileName = null)
     {
         var fileCheckerInstance = new FileChecker();
         var fileObject = new FileObject(byteArray, fileName);
         var scanResult = fileCheckerInstance.CheckFile(fileObject, profileName);
-        Console.WriteLine($"{scanResult.FileName} processed:"
+        log.Info($"{scanResult.FileName} processed:"
                           + $"successful=>{scanResult.ScanSuccessful},"
                           + $"matches found=>{scanResult.MatchedRules.Count > 0},"
                           + $"additional info=>{scanResult.AdditionalInfo ?? "No Info"},"
@@ -118,25 +119,31 @@ internal class Program
         );
     }
 
-    private void ScanByteArrayWithCustomProfile(byte[] byteArray, string fileName = null)
+    private static void ScanFileWithCustomProfile(string sampleFilePath, ILog log)
     {
+
         var fileCheckerInstance = new FileChecker();
-        var fileObject = new FileObject(byteArray, fileName);
+        var fileObject = new FileObject(ReadFileBytes(sampleFilePath), sampleFilePath);
 
         using var scanConfiguration = new ScanConfig();
 
         scanConfiguration.FileSizeLimitKb = 2048; 
         scanConfiguration.ArchiveDepthLimit = 1; 
-        scanConfiguration.ProcessingTimeLimitMs = 10000;
+        scanConfiguration.ProcessingTimeLimitMs = 1000000;
         scanConfiguration.FilesCountLimit = 10; 
         scanConfiguration.ScanArchives = true; 
         scanConfiguration.FastScan = false; 
         scanConfiguration.ArchiveFileTypes = new List<string> { "*.7z" };
-        scanConfiguration.YaraRules = new List<string> { "C:/path/to/files/with/yara/rules"  }; 
+        scanConfiguration.YaraRules = new List<string> { "C:/path/to/rules.yar"  }; 
         scanConfiguration.ProcessingLimits = new Limits();
+        scanConfiguration.PasswordsToBrute = new List<string> {"123", "abc"};
+        scanConfiguration.ExecutableExtensions = new List<string>{"*.exe"};
+        scanConfiguration.Log = log;
+        scanConfiguration.DangerousThreshold = 100;
+        SevenZipBase.SetLibraryPath("C:\\path\\to\\7z.dll");
 
         var scanResult = fileCheckerInstance.CheckFile(fileObject, scanConfiguration);
-        Console.WriteLine($"{scanResult.FileName} processed:"
+        log.Info($"{scanResult.FileName} processed:"
                           + $"successful=>{scanResult.ScanSuccessful},"
                           + $"matches found=>{scanResult.MatchedRules.Count > 0},"
                           + $"additional info=>{scanResult.AdditionalInfo ?? "No Info"},"

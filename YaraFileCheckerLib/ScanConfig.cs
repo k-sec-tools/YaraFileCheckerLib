@@ -47,11 +47,8 @@ public class ScanConfig : IDisposable
     public IEnumerable<string> ArchiveFileTypes { get; set; }
     public IEnumerable<string> ExecutableExtensions { get; set; }
 
-/*
-    public static bool IsDirectory(string path)
-        => Directory.Exists(path);
-*/
-
+    public IEnumerable<string> PasswordsToBrute { get; set; }
+    
     public static bool IsFile(string path)
         => File.Exists(path);
 

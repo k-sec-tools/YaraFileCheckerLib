@@ -41,9 +41,8 @@ public partial class FileChecker
             using var sevenZipExtractor = new SevenZipExtractor(memoryStream);
             return ExtractorCheck(sevenZipExtractor, scanConfig);
         }
-        catch(Exception ex)
+        catch
         {
-            scanConfig.Log.Error(ex, $"Cant check file with extractor correctly");
             return false;
         }
     }
@@ -85,7 +84,6 @@ public partial class FileChecker
             catch (Exception ex)
             {
                 res = false;
-                scanConfig.Log.Error(ex, $"Cant check file with extractor correctly");
             }
         }
         else
